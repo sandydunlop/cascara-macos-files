@@ -1,0 +1,103 @@
+plugins {
+    id 'java-library'
+    id 'signing'
+	id 'maven-publish'
+}
+
+
+group = 'io.github.qishr'
+version = '1.0.0'
+
+
+repositories {
+    mavenCentral()
+}
+
+
+java {
+    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_17
+
+    withSourcesJar()
+    withJavadocJar()
+}
+
+
+dependencies {
+    implementation 'net.java.dev.jna:jna:5.16.0'
+    implementation 'net.java.dev.jna:jna-platform:5.16.0'
+}
+
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+    }
+}
+
+
+jar {
+    archiveBaseName.set("cascara-macos-files")
+    manifest {
+        attributes(
+            'Implementation-Title': 'cascara-macos-files',
+            'Implementation-Version': version,
+            'Implementation-Vendor': group,
+            'Automatic-Module-Name': 'cascara.macos.files',
+            'Built-Date': new Date(),
+            'Multi-Release': 'false'
+        )
+    }
+}
+
+
+jar.doLast {
+    def jarFile = archiveFile.get().asFile
+    ant.checksum file: jarFile
+}
+
+
+signing {
+    sign publishing.publications
+}
+
+
+publishing {
+    publications {
+        macosFiles(MavenPublication) {
+            from components.java
+            pom {
+                name = 'cascara-macos-files'
+                description = 'A clean, modular, JNA-powered bridge for handling macOS FileOpen events in JavaFX and Swing.'
+                url = 'https://qishr.github.io/cascara-macos-files'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://mit-license.org/'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'qishr'
+                        name = 'Sandy Dunlop'
+                        email = 'sandy.dunlop@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/qishr/cascara-macos-files.git'
+                    developerConnection = 'scm:git:ssh://github.com:qishr/cascara-macos-files.git'
+                    url = 'https://github.com/qishr/cascara-macos-files'
+                }
+            }
+        }
+    }
+
+	repositories {
+        maven {
+            name = "LocalMavenWithChecksums"
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
+        }
+    }
+}
