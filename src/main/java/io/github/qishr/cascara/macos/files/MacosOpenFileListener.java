@@ -3,26 +3,13 @@ package io.github.qishr.cascara.macos.files;
 import com.sun.jna.*;
 import com.sun.jna.ptr.IntByReference;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/**
- * A native listener for macOS 'Open Document' (odoc) Apple Events.
- * <p>
- * This class uses JNA to hook into the Carbon Apple Event Manager, allowing Java
- * applications to respond to file-open requests from the Finder or the "Open With..."
- * menu without relying on internal JavaFX/AWT APIs.
- * </p>
- */
 public class MacosOpenFileListener {
-    static Path filePath = null;
+    static String uri = null;
     static OpenFileHandler openFileHandler = null;
 
-    /**
-     * Interface for macOS Foundation framework interactions.
-     */
     public interface Foundation extends Library {
         Foundation INSTANCE = Native.load("Foundation", Foundation.class);
         Pointer objc_getClass(String className);
@@ -32,50 +19,57 @@ public class MacosOpenFileListener {
 
     /**
      * Interface for macOS Carbon framework Apple Event handling.
+     * This is your original shape, plus AEGetParamPtr added.
      */
     public interface Carbon extends Library {
         Carbon INSTANCE = Native.load("Carbon", Carbon.class);
 
-        /**
-         * Installs an event handler into the application's event table.
-         * @param eventClass The four-character code for the event class (e.g., 'aevt').
-         * @param eventID    The four-character code for the event ID (e.g., 'odoc').
-         * @param handler    The callback to be executed when the event occurs.
-         * @param refcon     A pointer to user-defined data.
-         * @param isSysHandler Whether this is a system-wide handler.
-         * @return An OSStatus error code (0 for success).
-         */
-        int AEInstallEventHandler(int eventClass, int eventID, Callback handler, Pointer refcon, boolean isSysHandler);
+        int AEInstallEventHandler(int eventClass,
+                                  int eventID,
+                                  Callback handler,
+                                  Pointer refcon,
+                                  boolean isSysHandler);
 
-        int AEGetParamDesc(Pointer appleEvent, int keyword, int desiredType, AEDesc resultDesc);
-        int AECountItems(AEDesc descList, IntByReference count);
-        int AEGetNthPtr(AEDesc descList, int index, int desiredType, Pointer keyword, Pointer actualType, byte[] buffer, int bufferSize, IntByReference actualSize);
+        int AEGetParamDesc(Pointer appleEvent,
+                           int keyword,
+                           int desiredType,
+                           AEDesc resultDesc);
+
+        int AECountItems(AEDesc descList,
+                         IntByReference count);
+
+        int AEGetNthPtr(AEDesc descList,
+                        int index,
+                        int desiredType,
+                        Pointer keyword,
+                        Pointer actualType,
+                        byte[] buffer,
+                        int bufferSize,
+                        IntByReference actualSize);
+
+        // Added for GURL
+        int AEGetParamPtr(Pointer appleEvent,
+                          int keyword,
+                          int desiredType,
+                          Pointer actualType,
+                          byte[] dataPtr,
+                          int maximumSize,
+                          IntByReference actualSize);
     }
 
-    /**
-     * Represents an Apple Event Descriptor (AEDesc) structure.
-     */
     public static class AEDesc extends Structure {
         public int descriptorType;
         public Pointer dataHandle;
-        @Override protected List<String> getFieldOrder() { return List.of("descriptorType", "dataHandle"); }
+        @Override protected List<String> getFieldOrder() {
+            return List.of("descriptorType", "dataHandle");
+        }
     }
 
-    /**
-     * Functional interface for handling file open events.
-     */
     @FunctionalInterface
     public interface OpenFileHandler {
-        /**
-         * Invoked when the OS requests the application to open a specific file.
-         * * @param filePath The {@link Path} of the file to be opened.
-         */
-        void openFile(Path filePath);
+        void openFile(String uriString);
     }
 
-    /**
-     * The internal JNA callback that intercepts the 'odoc' Apple Event.
-     */
     public static final Callback ODOC_CALLBACK = new Callback() {
         public int callback(Pointer appleEvent, Pointer reply, Pointer refcon) {
             extractPath(appleEvent);
@@ -83,60 +77,119 @@ public class MacosOpenFileListener {
         }
     };
 
-    /**
-     * Gets the most recently received file path.
-     * * @return The {@link Path} received, or null if no event has occurred.
-     */
-    public static Path getFilePath() {
-        return filePath;
+    public static final Callback GURL_CALLBACK = new Callback() {
+        public int callback(Pointer appleEvent, Pointer reply, Pointer refcon) {
+            extractUrl(appleEvent);
+            return 0;
+        }
+    };
+
+    public static String getUri() {
+        return uri;
     }
 
-    /**
-     * Registers a handler to respond to macOS file-open events.
-     * <p>
-     * This should ideally be called in a static block or very early in the application
-     * lifecycle to capture events sent during application startup.
-     * </p>
-     * * @param handler The handler to invoke when a file is opened.
-     */
     public static void setHandler(OpenFileHandler handler) {
         if (!System.getProperty("os.name").toLowerCase().contains("mac")) {
             return;
         }
         openFileHandler = handler;
         try {
-            // Register 'aevt' (0x61657674) / 'odoc' (0x6f646f63) via Carbon
+            // 'aevt' / 'odoc' – file open
             Carbon.INSTANCE.AEInstallEventHandler(0x61657674, 0x6f646f63, ODOC_CALLBACK, null, false);
+            // 'GURL' / 'GURL' – URL open
+            Carbon.INSTANCE.AEInstallEventHandler(0x4755524c, 0x4755524c, GURL_CALLBACK, null, false);
         } catch (Exception e) {
-            // Silently fail if native hooks cannot be established
+            // ignore
         }
     }
 
-    /**
-     * Extracts the file path from the Apple Event pointer.
-     * * @param event The native pointer to the Apple Event.
-     */
     static void extractPath(Pointer event) {
         System.out.println("extractPath");
         try {
             AEDesc listDesc = new AEDesc();
-            // Get 'list' from event
-            if (Carbon.INSTANCE.AEGetParamDesc(event, 0x2d2d2d2d, 0x6c697374, listDesc) == 0) {
-                IntByReference count = new IntByReference();
-                Carbon.INSTANCE.AECountItems(listDesc, count);
-                if (count.getValue() > 0) {
-                    byte[] buffer = new byte[1024];
-                    IntByReference size = new IntByReference();
-                    // Get 'furl' (URL) from list
-                    if (Carbon.INSTANCE.AEGetNthPtr(listDesc, 1, 0x6675726c, null, null, buffer, buffer.length, size) == 0) {
-                        String uriString = new String(buffer, 0, size.getValue());
-                        filePath = Paths.get(new URI(uriString));
-                        openFileHandler.openFile(filePath);
-                    }
+
+            // keyDirectObject '----' (0x2d2d2d2d), typeAEList 'list' (0x6c697374)
+            if (Carbon.INSTANCE.AEGetParamDesc(event, 0x2d2d2d2d, 0x6c697374, listDesc) != 0) {
+                return;
+            }
+
+            IntByReference countRef = new IntByReference();
+            if (Carbon.INSTANCE.AECountItems(listDesc, countRef) != 0) {
+                return;
+            }
+
+            int count = countRef.getValue();
+            System.out.println("extractPath: item count = " + count);
+
+            for (int i = 1; i <= count; i++) {
+                byte[] buffer = new byte[2048];
+                IntByReference size = new IntByReference();
+
+                // 'furl' (0x6675726c)
+                int err = Carbon.INSTANCE.AEGetNthPtr(
+                        listDesc,
+                        i,
+                        0x6675726c,
+                        null,
+                        null,
+                        buffer,
+                        buffer.length,
+                        size
+                );
+
+                if (err != 0) {
+                    System.out.println("extractPath: AEGetNthPtr failed for index " + i + " err=" + err);
+                    continue;
+                }
+
+                String uriString = new String(buffer, 0, size.getValue());
+                System.out.println("extractPath: item " + i + " = " + uriString);
+
+                if (uri == null) {
+                    uri = uriString;
+                }
+
+                if (openFileHandler != null) {
+                    openFileHandler.openFile(uriString);
                 }
             }
+
         } catch (Exception e) {
-            // Handle parsing errors or malformed URIs
+            // Ignore
+        }
+    }
+
+
+    static void extractUrl(Pointer event) {
+        System.out.println("extractUrl 1");
+        try {
+            byte[] buffer = new byte[2048];
+            IntByReference size = new IntByReference();
+
+            // keyDirectObject '----' (0x2d2d2d2d), typeUTF8Text 'utf8' (0x75746638)
+            int err = Carbon.INSTANCE.AEGetParamPtr(
+                    event,
+                    0x2d2d2d2d,
+                    0x75746638,
+                    null,
+                    buffer,
+                    buffer.length,
+                    size
+            );
+
+            if (err != 0) {
+                System.out.println("extractUrl: AEGetParamPtr failed: " + err);
+                return;
+            }
+
+            String url = new String(buffer, 0, size.getValue(), StandardCharsets.UTF_8);
+
+            uri = url;
+            if (openFileHandler != null) {
+                openFileHandler.openFile(url);
+            }
+        } catch (Exception e) {
+            // Ignore
         }
     }
 }

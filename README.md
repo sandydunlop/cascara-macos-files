@@ -14,11 +14,15 @@ Standard Java/JavaFX APIs for handling macOS "Open File" events (like double-cli
 
 **Cascara macOS Files** provides a native listener that registers early and works without hacking JDK internals.
 
+### Installation (Gradle)
+
+```gradle
+implementation 'io.github.qishr:cascara-macos-files:1.0.0'
+```
+
 ### Installation (Maven)
 
-XML
-
-```
+```xml
 <dependency>
     <groupId>io.github.qishr</groupId>
     <artifactId>cascara-macos-files</artifactId>
