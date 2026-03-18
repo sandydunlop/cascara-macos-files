@@ -1,68 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" output="build/resources/test" path="src/test/resources">
+	<classpathentry kind="src" output="bin/main" path="src/main/java">
 		<attributes>
-			<attribute name="test" value="true"/>
-			<attribute name="optional" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-			<attribute name="resource" value="true"/>
+			<attribute name="gradle_scope" value="main"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="src" output="build/classes/java/test" path="src/test/java">
-		<attributes>
-			<attribute name="test" value="true"/>
-			<attribute name="optional" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" output="build/resources/main" path="src/main/resources">
-		<attributes>
-			<attribute name="optional" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-			<attribute name="resource" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" output="build/classes/java/main" path="src/main/java">
-		<attributes>
-			<attribute name="gradle.buildServer" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" output="build/classes/java/test" path="build/generated/sources/annotationProcessor/java/test">
-		<attributes>
-			<attribute name="test" value="true"/>
-			<attribute name="optional" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" output="build/classes/java/main" path="build/generated/sources/annotationProcessor/java/main">
-		<attributes>
-			<attribute name="optional" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.launching.macosx.MacOSXType/JavaSE-17">
-		<attributes>
-			<attribute name="module" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="/Users/sandy/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna-platform/5.16.0/b2a9065f97c166893d504b164706512338e3bbc2/jna-platform-5.16.0.jar" sourcepath="/Users/sandy/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna-platform/5.16.0/8104fa45243ddd1dc250714a342701a4294a28c0/jna-platform-5.16.0-sources.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-			<attribute name="groupId" value="net.java.dev.jna"/>
-			<attribute name="artifactId" value="jna-platform"/>
-			<attribute name="version" value="5.16.0"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="/Users/sandy/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.16.0/ebea09f91dc9f7048099f963fb8d6f919f0a4d9c/jna-5.16.0.jar" sourcepath="/Users/sandy/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.16.0/4fb8a8af5ba9b24599b7d5a9505c3fc038762144/jna-5.16.0-sources.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-			<attribute name="gradle.buildServer" value="true"/>
-			<attribute name="groupId" value="net.java.dev.jna"/>
-			<attribute name="artifactId" value="jna"/>
-			<attribute name="version" value="5.16.0"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-17/"/>
+	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
+	<classpathentry kind="output" path="bin/default"/>
 </classpath>
